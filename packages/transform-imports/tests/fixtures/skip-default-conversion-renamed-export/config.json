@@ -1,0 +1,6 @@
+{
+  "icons": {
+    "transform": "icons/dist/{{member}}",
+    "skipDefaultConversion": true
+  }
+}

@@ -136,7 +136,8 @@ function processImportDeclaration(
       const transformedPath = resolveTransformPath(config.transform, imported, matches)
 
       if (config.skipDefaultConversion) {
-        newImports.push(`import { ${local} } from "${transformedPath}";`)
+        const binding = imported === local ? local : `${imported} as ${local}`
+        newImports.push(`import { ${binding} } from "${transformedPath}";`)
       } else {
         newImports.push(`import ${local} from "${transformedPath}";`)
       }
@@ -178,7 +179,8 @@ function processExportNamedDeclaration(
     const exported = getName(spec.exported)
     const transformedPath = resolveTransformPath(config.transform, local, matches)
     if (config.skipDefaultConversion) {
-      reexports.push(`export { ${exported} } from "${transformedPath}";`)
+      const binding = local === exported ? exported : `${local} as ${exported}`
+      reexports.push(`export { ${binding} } from "${transformedPath}";`)
     } else {
       reexports.push(`export { default as ${exported} } from "${transformedPath}";`)
     }
