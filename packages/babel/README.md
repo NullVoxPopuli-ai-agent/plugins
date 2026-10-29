@@ -126,10 +126,14 @@ Workers take time to start, so this option helps large projects most.
 All Babel options must be able to go to a worker thread. Refer to plugins and presets by module name, not by function or object. The `rolldown` part of a [Rolldown Babel Preset](#rolldown-babel-presets) stays in the main thread, so its filters and hooks can be functions.
 
 ```js
-babel({
-  parallel: true,
-  plugins: [['@babel/plugin-proposal-decorators', { version: '2023-11' }]],
-})
+export default {
+  plugins: [
+    babel({
+      parallel: true,
+      plugins: [['@babel/plugin-proposal-decorators', { version: '2023-11' }]],
+    })
+  ],
+}
 ```
 
 ### Other Babel options
