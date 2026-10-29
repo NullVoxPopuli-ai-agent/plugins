@@ -7,6 +7,17 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 describe('transform-imports', () => {
+  for (const ext of ['js', 'jsx', 'ts', 'tsx']) {
+    it(`transforms imports in query-suffixed .${ext} modules`, async () => {
+      const result = await transform(
+        `import { IconCheck } from 'icons'; console.log(IconCheck)`,
+        { icons: { transform: 'icons/{{member}}.js' } },
+        `virtual:entry.${ext}?tsr-split=component`,
+      )
+      expect(result).toContain('icons/IconCheck.js')
+    })
+  }
+
   it('throws on namespace import when preventFullImport is true', async () => {
     const input = `import * as Bootstrap from 'react-bootstrap'\nconsole.log(Bootstrap)`
     const config = {
@@ -49,19 +60,23 @@ describe('fixtures', () => {
   }
 })
 
-async function transform(code: string, modules: TransformImportsOptions): Promise<string> {
+async function transform(
+  code: string,
+  modules: TransformImportsOptions,
+  virtualEntry = 'virtual:entry.ts',
+): Promise<string> {
   const build = await rolldown({
-    input: 'virtual:entry.ts',
+    input: virtualEntry,
     plugins: [
       {
         name: 'virtual',
         resolveId(id) {
-          if (id === 'virtual:entry.ts') return id
+          if (id === virtualEntry) return id
           // Mark transformed imports as external
           return { id, external: true }
         },
         load(id) {
-          if (id === 'virtual:entry.ts') return code
+          if (id === virtualEntry) return code
         },
       },
       transformImportsPlugin(modules),

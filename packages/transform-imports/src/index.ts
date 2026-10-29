@@ -239,7 +239,7 @@ export function transformImportsPlugin(options: TransformImportsOptions): Plugin
 
     transform: {
       filter: {
-        id: /\.[jt]sx?$/,
+        id: /\.[jt]sx?(?:$|\?)/,
         ...(codeFilter && { code: { include: codeFilter } }),
       },
 
