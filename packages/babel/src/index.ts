@@ -13,10 +13,13 @@ import {
   resolveParallelOption,
   type WorkerPool,
 } from './parallel.ts'
-import { transformWithBabel, type TransformResult } from './transform.ts'
+import type { TransformResult } from './transform.ts'
 import type { PartialEnvironment, PresetConversionContext } from './rolldownPreset.ts'
 import { calculatePluginFilters } from './filter.ts'
 import type { ResolvedConfig, Plugin as VitePlugin } from 'vite'
+
+type TransformModule = typeof import('./transform.ts')
+let transformModule: TransformModule | Promise<TransformModule> | undefined
 
 async function babelPlugin(rawOptions: PluginOptions): Promise<Plugin> {
   if (rawOptions.runtimeVersion) {
@@ -93,7 +96,13 @@ async function babelPlugin(rawOptions: PluginOptions): Promise<Plugin> {
             workerPool ??= createWorkerPool(maxWorkers)
             result = await workerPool.run(code, id, babelOptions, rawOptions.runtimeVersion)
           } else {
-            result = await transformWithBabel(code, id, babelOptions, rawOptions.runtimeVersion)
+            transformModule = await (transformModule ??= import('./transform.ts'))
+            result = await transformModule.transformWithBabel(
+              code,
+              id,
+              babelOptions,
+              rawOptions.runtimeVersion,
+            )
           }
         } catch (err: any) {
           const cloneError = describeCloneError(err, rawOptions)
