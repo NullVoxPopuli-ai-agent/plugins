@@ -131,7 +131,7 @@ export default {
     babel({
       parallel: true,
       plugins: [['@babel/plugin-proposal-decorators', { version: '2023-11' }]],
-    })
+    }),
   ],
 }
 ```
