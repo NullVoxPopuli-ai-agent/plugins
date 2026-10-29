@@ -3,13 +3,23 @@ import { Worker } from 'artichokie'
 import type { PluginOptions } from './options.ts'
 import { findUncloneableOption } from './cloneable.ts'
 import type { transformWithBabel, TransformResult } from './transform.ts'
-import type { WorkerResponse } from './worker.ts'
 
 type TransformArgs = Parameters<typeof transformWithBabel>
 
-// The source worker is used when this file runs unbundled, for example in tests.
-const WORKER_URL = new URL(
-  import.meta.url.endsWith('.ts') ? './worker.ts' : './worker.mjs',
+interface WorkerError {
+  message: string
+  stack: string | undefined
+  code: string | undefined
+  reasonCode: string | undefined
+  pos: number | undefined
+  loc: { line: number; column: number } | undefined
+}
+
+type WorkerResponse = { result: TransformResult | undefined } | { error: WorkerError }
+
+// The source module is used when this file runs unbundled, for example in tests.
+const TRANSFORM_URL = new URL(
+  import.meta.url.endsWith('.ts') ? './transform.ts' : './transform.mjs',
   import.meta.url,
 ).href
 
@@ -39,19 +49,37 @@ export interface WorkerPool {
 }
 
 export function createWorkerPool(maxWorkers: number): WorkerPool {
-  // artichokie sends this function to the worker as a string, so it cannot use outer variables.
+  const getTransformUrl = () => TRANSFORM_URL
+
   const worker = new Worker(
-    () =>
-      async (workerUrl: string, args: TransformArgs): Promise<WorkerResponse> => {
-        const { transform } = await import(workerUrl)
-        return transform(args)
-      },
-    { max: maxWorkers },
+    async () => {
+      const { transformWithBabel }: typeof import('./transform.ts') = await import(
+        getTransformUrl()
+      )
+      return async (...args: TransformArgs): Promise<WorkerResponse> => {
+        try {
+          return { result: await transformWithBabel(...args) }
+        } catch (err: any) {
+          // The structured clone of an error drops fields such as `loc`, so send a plain object.
+          return {
+            error: {
+              message: err.message,
+              stack: err.stack,
+              code: err.code,
+              reasonCode: err.reasonCode,
+              pos: err.pos,
+              loc: err.loc && { line: err.loc.line, column: err.loc.column },
+            },
+          }
+        }
+      }
+    },
+    { max: maxWorkers, parentFunctions: { getTransformUrl } },
   )
 
   return {
     async run(...args) {
-      const response = await worker.run(WORKER_URL, args)
+      const response = await worker.run(...args)
       if ('error' in response) {
         throw Object.assign(new Error(response.error.message), response.error)
       }
